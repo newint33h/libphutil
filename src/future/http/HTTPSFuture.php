@@ -9,6 +9,8 @@ final class HTTPSFuture extends BaseHTTPFuture {
   private static $results = array();
   private static $pool = array();
   private static $globalCABundle;
+  private static $globalSSLKey;
+  private static $globalSSLCert;
   private static $blindTrustDomains = array();
 
   private $handle;
@@ -95,6 +97,20 @@ final class HTTPSFuture extends BaseHTTPFuture {
   public static function setGlobalCABundleFromPath($path) {
     self::$globalCABundle = $path;
   }
+  
+  /**
+   * Set the client certificate parameters to use in the HTTPS
+   * connection.
+   *
+   * @param string The path to a valid SSL private key
+   * @param string The path to a valid SSL certificate
+   * @return void
+   */
+  public static function setClientCertificateFromPath($ssl_key, $ssl_cert) {
+    self::$globalSSLKey = $ssl_key;
+    self::$globalSSLCert = $ssl_cert;
+  }
+
   /**
    * Set the fallback CA certificate if one is not specified
    * for the session, given a string.
@@ -353,6 +369,11 @@ final class HTTPSFuture extends BaseHTTPFuture {
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
       } else {
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
+      }
+
+      if (!empty(self::$globalSSLKey) && !empty(self::$globalSSLCert)) {
+        curl_setopt($curl, CURLOPT_SSLKEY, self::$globalSSLKey);
+        curl_setopt($curl, CURLOPT_SSLCERT, self::$globalSSLCert);
       }
 
       curl_setopt($curl, CURLOPT_SSLVERSION, 0);
