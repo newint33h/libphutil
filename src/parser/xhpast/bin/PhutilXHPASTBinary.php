@@ -1,6 +1,6 @@
 <?php
 
-final class PhutilXHPASTBinary {
+final class PhutilXHPASTBinary extends Phobject {
 
   /**
    * The expected XHPAST version.
@@ -57,7 +57,7 @@ final class PhutilXHPASTBinary {
    */
   public static function getBuildInstructions() {
     $root = phutil_get_library_root('phutil');
-    $make = Filesystem::resolvePath($root.'/../scripts/build_xhpast.sh');
+    $make = Filesystem::resolvePath($root.'/../scripts/build_xhpast.php');
 
     return phutil_console_format(
       "%s:\n\n  \$ %s\n",

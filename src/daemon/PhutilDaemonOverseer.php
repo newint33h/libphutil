@@ -3,7 +3,7 @@
 /**
  * Oversees a daemon and restarts it if it fails.
  */
-final class PhutilDaemonOverseer {
+final class PhutilDaemonOverseer extends Phobject {
 
   private $argv;
   private $moreArgs;
@@ -29,7 +29,7 @@ final class PhutilDaemonOverseer {
     PhutilServiceProfiler::getInstance()->enableDiscardMode();
 
     $args = new PhutilArgumentParser($argv);
-    $args->setTagline('daemon overseer');
+    $args->setTagline(pht('daemon overseer'));
     $args->setSynopsis(<<<EOHELP
 **launch_daemon.php** [__options__] __daemon__
     Launch and oversee an instance of __daemon__.
@@ -439,7 +439,7 @@ EOHELP
       $results[(int)$pid] = array(
         'type' => $type,
         'command' => $command,
-        'pid' => (int) $pid,
+        'pid' => (int)$pid,
       );
     }
 

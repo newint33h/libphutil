@@ -1,6 +1,6 @@
 <?php
 
-final class PhutilDaemonHandle {
+final class PhutilDaemonHandle extends Phobject {
 
   const EVENT_DID_LAUNCH    = 'daemon.didLaunch';
   const EVENT_DID_LOG       = 'daemon.didLogMessage';
@@ -11,6 +11,7 @@ final class PhutilDaemonHandle {
   private $overseer;
   private $daemonClass;
   private $argv;
+  private $config;
   private $pid;
   private $daemonID;
   private $deadline;
@@ -273,8 +274,11 @@ final class PhutilDaemonHandle {
 
   private function updateMemory() {
     if ($this->traceMemory) {
-      $memuse = number_format(memory_get_usage() / 1024, 1);
-      $this->logMessage('RAMS', pht('Overseer Memory Usage: %d KB', $memuse));
+      $this->logMessage(
+        'RAMS',
+        pht(
+          'Overseer Memory Usage: %s KB',
+          new PhutilNumber(memory_get_usage() / 1024, 1)));
     }
   }
 
