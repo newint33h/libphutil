@@ -41,6 +41,8 @@ final class PhutilClassMapQuery extends Phobject {
 
   private $ancestorClass;
   private $expandMethod;
+  private $filterMethod;
+  private $filterNull = false;
   private $uniqueMethod;
   private $sortMethod;
 
@@ -54,9 +56,10 @@ final class PhutilClassMapQuery extends Phobject {
 
 
   /**
-   * Set the ancestor class name to load the concrete descendants of.
+   * Set the ancestor class or interface name to load the concrete descendants
+   * of.
    *
-   * @param string Ancestor class name.
+   * @param string Ancestor class or interface name.
    * @return this
    * @task config
    */
@@ -75,12 +78,15 @@ final class PhutilClassMapQuery extends Phobject {
    *
    * You must provide a method here to use @{method:setExpandMethod}.
    *
-   * @param string Name of the unique key method.
+   * @param string  Name of the unique key method.
+   * @param bool    If true, then classes which return `null` will be filtered
+   *                from the results.
    * @return this
    * @task config
    */
-  public function setUniqueMethod($unique_method) {
+  public function setUniqueMethod($unique_method, $filter_null = false) {
     $this->uniqueMethod = $unique_method;
+    $this->filterNull   = $filter_null;
     return $this;
   }
 
@@ -144,6 +150,19 @@ final class PhutilClassMapQuery extends Phobject {
   }
 
 
+  /**
+   * Provide a method to filter the map.
+   *
+   * @param string Name of the filtering method.
+   * @return this
+   * @task config
+   */
+  public function setFilterMethod($filter_method) {
+    $this->filterMethod = $filter_method;
+    return $this;
+  }
+
+
 /* -(  Executing the Query  )------------------------------------------------ */
 
 
@@ -178,15 +197,16 @@ final class PhutilClassMapQuery extends Phobject {
       throw new PhutilInvalidStateException('setAncestorClass');
     }
 
-    if (!class_exists($ancestor)) {
+    if (!class_exists($ancestor) && !interface_exists($ancestor)) {
       throw new Exception(
         pht(
           'Trying to execute a class map query for descendants of class '.
-          '"%s", but no such class exists.',
+          '"%s", but no such class or interface exists.',
           $ancestor));
     }
 
     $expand = $this->expandMethod;
+    $filter = $this->filterMethod;
     $unique = $this->uniqueMethod;
     $sort = $this->sortMethod;
 
@@ -224,6 +244,11 @@ final class PhutilClassMapQuery extends Phobject {
       $map = array();
       foreach ($list as $object) {
         $key = call_user_func(array($object, $unique));
+
+        if ($key === null && $this->filterNull) {
+          continue;
+        }
+
         if (empty($map[$key])) {
           $map[$key] = $object;
           continue;
@@ -242,6 +267,11 @@ final class PhutilClassMapQuery extends Phobject {
       }
     } else {
       $map = $list;
+    }
+
+    // Apply the "filter" mechanism, if it is configured.
+    if (strlen($filter)) {
+      $map = mfilter($map, $filter);
     }
 
     // Apply the "sort" mechanism, if it is configured.
@@ -266,7 +296,9 @@ final class PhutilClassMapQuery extends Phobject {
     $parts = array(
       $this->ancestorClass,
       $this->uniqueMethod,
+      $this->filterNull,
       $this->expandMethod,
+      $this->filterMethod,
       $this->sortMethod,
     );
     return implode(':', $parts);

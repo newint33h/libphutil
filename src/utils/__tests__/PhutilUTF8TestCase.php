@@ -150,7 +150,9 @@ final class PhutilUTF8TestCase extends PhutilTestCase {
       // This behavior is maybe a little bad, but it seems mostly reasonable,
       // at least for latin languages.
       array(
-        'Derp, supercalafragalisticexpialadoshus', 30, '...',
+        'Derp, supercalafragalisticexpialadoshus',
+        30,
+        '...',
         'Derp...',
       ),
 
@@ -176,27 +178,39 @@ final class PhutilUTF8TestCase extends PhutilTestCase {
     $cases = array(
       array(
         "o\xCD\xA0o\xCD\xA0o\xCD\xA0o\xCD\xA0o\xCD\xA0",
-        6, "o\xCD\xA0!",
-        6, "o\xCD\xA0o\xCD\xA0!",
-        6, "o\xCD\xA0o\xCD\xA0o\xCD\xA0o\xCD\xA0o\xCD\xA0",
+        6,
+        "o\xCD\xA0!",
+        6,
+        "o\xCD\xA0o\xCD\xA0!",
+        6,
+        "o\xCD\xA0o\xCD\xA0o\xCD\xA0o\xCD\xA0o\xCD\xA0",
       ),
       array(
         "X\xCD\xA0\xCD\xA0\xCD\xA0Y",
-        6, '!',
-        6, "X\xCD\xA0\xCD\xA0\xCD\xA0Y",
-        6, "X\xCD\xA0\xCD\xA0\xCD\xA0Y",
+        6,
+        '!',
+        6,
+        "X\xCD\xA0\xCD\xA0\xCD\xA0Y",
+        6,
+        "X\xCD\xA0\xCD\xA0\xCD\xA0Y",
       ),
       array(
         "X\xCD\xA0\xCD\xA0\xCD\xA0YZ",
-        6, '!',
-        5, "X\xCD\xA0\xCD\xA0\xCD\xA0!",
-        2, "X\xCD\xA0\xCD\xA0\xCD\xA0!",
+        6,
+        '!',
+        5,
+        "X\xCD\xA0\xCD\xA0\xCD\xA0!",
+        2,
+        "X\xCD\xA0\xCD\xA0\xCD\xA0!",
       ),
       array(
         "\xE2\x98\x83\xE2\x98\x83\xE2\x98\x83\xE2\x98\x83",
-        4, "\xE2\x98\x83!",
-        3, "\xE2\x98\x83\xE2\x98\x83!",
-        3, "\xE2\x98\x83\xE2\x98\x83!",
+        4,
+        "\xE2\x98\x83!",
+        3,
+        "\xE2\x98\x83\xE2\x98\x83!",
+        3,
+        "\xE2\x98\x83\xE2\x98\x83!",
       ),
     );
 
@@ -221,6 +235,25 @@ final class PhutilUTF8TestCase extends PhutilTestCase {
         ->truncateString($input);
       $this->assertEqual($g_out, $result, pht('glyph-short of %s', $input));
     }
+  }
+
+  public function testUTF8LargeTruncation() {
+    // This is testing that our performance is reasonable when truncating a
+    // large input into a small output. Runtime should be on the order of the
+    // output size, not the input size.
+
+    $whale = "\xF0\x9F\x90\xB3";
+    $input = str_repeat($whale, 1024 * 1024);
+
+    $result = id(new PhutilUTF8StringTruncator())
+      ->setMaximumBytes(16)
+      ->setTerminator('!')
+      ->truncateString($input);
+
+    $this->assertEqual(
+      str_repeat($whale, 3).'!',
+      $result,
+      pht('Large truncation.'));
   }
 
   public function testUTF8Wrap() {

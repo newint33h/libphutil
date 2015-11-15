@@ -231,7 +231,7 @@ final class PhutilUtilsTestCase extends PhutilTestCase {
       'InvalidArgumentException');
   }
 
-  public function testAssertStringLike () {
+  public function testAssertStringLike() {
     $this->assertEqual(
       null,
       assert_stringlike(null));
@@ -776,5 +776,46 @@ final class PhutilUtilsTestCase extends PhutilTestCase {
       $this->assertTrue($caught instanceof InvalidArgumentException);
     }
   }
+
+  public function testJSONEncode() {
+    $in = array(
+      'example' => "Not Valid UTF8: \x80",
+    );
+
+    $caught = null;
+    try {
+      $value = phutil_json_encode($in);
+    } catch (Exception $ex) {
+      $caught = $ex;
+    }
+
+    $this->assertTrue(($caught instanceof Exception));
+  }
+
+  public function testHashComparisons() {
+    $tests = array(
+      array('1', '12', false),
+      array('0', '0e123', false),
+      array('0e123', '0e124', false),
+      array('', '0', false),
+      array('000', '0e0', false),
+      array('001', '002', false),
+      array('0', '', false),
+      array('987654321', '123456789', false),
+      array('A', 'a', false),
+      array('123456789', '123456789', true),
+      array('hunter42', 'hunter42', true),
+    );
+
+    foreach ($tests as $key => $test) {
+      list($u, $v, $expect) = $test;
+      $actual = phutil_hashes_are_identical($u, $v);
+      $this->assertEqual(
+        $expect,
+        $actual,
+        pht('Test Case: "%s" vs "%s"', $u, $v));
+    }
+  }
+
 
 }

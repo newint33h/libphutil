@@ -742,7 +742,7 @@ function array_mergev(array $arrayv) {
     if (!is_array($item)) {
       throw new InvalidArgumentException(
         pht(
-          'Expected all items passed to %s to be arrays, but '.
+          'Expected all items passed to `%s` to be arrays, but '.
           'argument with key "%s" has type "%s".',
           __FUNCTION__.'()',
           $key,
@@ -1052,6 +1052,119 @@ function phutil_json_decode($string) {
 
 
 /**
+ * Encode a value in JSON, raising an exception if it can not be encoded.
+ *
+ * @param wild A value to encode.
+ * @return string JSON representation of the value.
+ */
+function phutil_json_encode($value) {
+  $result = @json_encode($value);
+  if ($result === false) {
+    $reason = phutil_validate_json($value);
+    if (function_exists('json_last_error')) {
+      $err = json_last_error();
+      if (function_exists('json_last_error_msg')) {
+        $msg = json_last_error_msg();
+        $extra = pht('#%d: %s', $err, $msg);
+      } else {
+        $extra = pht('#%d', $err);
+      }
+    } else {
+      $extra = null;
+    }
+
+    if ($extra) {
+      $message = pht(
+        'Failed to JSON encode value (%s): %s.',
+        $extra,
+        $reason);
+    } else {
+      $message = pht(
+        'Failed to JSON encode value: %s.',
+        $reason);
+    }
+
+    throw new Exception($message);
+  }
+
+  return $result;
+}
+
+
+/**
+ * Produce a human-readable explanation why a value can not be JSON-encoded.
+ *
+ * @param wild Value to validate.
+ * @param string Path within the object to provide context.
+ * @return string|null Explanation of why it can't be encoded, or null.
+ */
+function phutil_validate_json($value, $path = '') {
+  if ($value === null) {
+    return;
+  }
+
+  if ($value === true) {
+    return;
+  }
+
+  if ($value === false) {
+    return;
+  }
+
+  if (is_int($value)) {
+    return;
+  }
+
+  if (is_float($value)) {
+    return;
+  }
+
+  if (is_array($value)) {
+    foreach ($value as $key => $subvalue) {
+      if (strlen($path)) {
+        $full_key = $path.' > ';
+      } else {
+        $full_key = '';
+      }
+
+      if (!phutil_is_utf8($key)) {
+        $full_key = $full_key.phutil_utf8ize($key);
+        return pht(
+          'Dictionary key "%s" is not valid UTF8, and cannot be JSON encoded.',
+          $full_key);
+      }
+
+      $full_key .= $key;
+      $result = phutil_validate_json($subvalue, $full_key);
+      if ($result !== null) {
+        return $result;
+      }
+    }
+  }
+
+  if (is_string($value)) {
+    if (!phutil_is_utf8($value)) {
+      $display = substr($value, 0, 256);
+      $display = phutil_utf8ize($display);
+      if (!strlen($path)) {
+        return pht(
+          'String value is not valid UTF8, and can not be JSON encoded: %s',
+          $display);
+      } else {
+        return pht(
+          'Dictionary value at key "%s" is not valid UTF8, and cannot be '.
+          'JSON encoded: %s',
+          $path,
+          $display);
+      }
+    }
+  }
+
+  return;
+}
+
+
+/**
  * Decode an INI string.
  *
  * @param  string
@@ -1246,4 +1359,51 @@ function phutil_fnmatch($glob, $path) {
 
   $regex = '(\A'.$regex.'\z)';
   return (bool)preg_match($regex, $path);
+}
+
+
+/**
+ * Compare two hashes for equality.
+ *
+ * This function defuses two attacks: timing attacks and type juggling attacks.
+ *
+ * In a timing attack, the attacker observes that strings which match the
+ * secret take slightly longer to fail to match because more characters are
+ * compared. By testing a large number of strings, they can learn the secret
+ * character by character. This defuses timing attacks by always doing the
+ * same amount of work.
+ *
+ * In a type juggling attack, an attacker takes advantage of PHP's type rules
+ * where `"0" == "0e12345"` for any exponent. A portion of of hexadecimal
+ * hashes match this pattern and are vulnerable. This defuses this attack by
+ * performing bytewise character-by-character comparison.
+ *
+ * It is questionable how practical these attacks are, but they are possible
+ * in theory and defusing them is straightforward.
+ *
+ * @param string First hash.
+ * @param string Second hash.
+ * @return bool True if hashes are identical.
+ */
+function phutil_hashes_are_identical($u, $v) {
+  if (!is_string($u)) {
+    throw new Exception(pht('First hash argument must be a string.'));
+  }
+
+  if (!is_string($v)) {
+    throw new Exception(pht('Second hash argument must be a string.'));
+  }
+
+  if (strlen($u) !== strlen($v)) {
+    return false;
+  }
+
+  $len = strlen($v);
+
+  $bits = 0;
+  for ($ii = 0; $ii < $len; $ii++) {
+    $bits |= (ord($u[$ii]) ^ ord($v[$ii]));
+  }
+
+  return ($bits === 0);
 }
